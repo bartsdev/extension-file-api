@@ -1,0 +1,101 @@
+# ── build system ──────────────────────────────────────────────────────────────
+[build-system]
+requires      = ["setuptools", "wheel", "plux>=1.3.1"]
+build-backend = "setuptools.build_meta"
+
+# ── project metadata (PEP 621) ────────────────────────────────────────────────
+[project]
+name            = "localstack-file-api"
+version         = "0.1.0"
+description     = "LocalStack Extension: generic file-upload REST API"
+readme          = {file = "README.md", content-type = "text/markdown; charset=UTF-8"}
+requires-python = ">=3.8"
+license         = {text = "Apache-2.0"}
+authors         = [
+    {name = "Bart Szydlowski", email = "bart.szydlowski@localstack.cloud"},
+]
+keywords     = ["localstack", "localstack-extension", "extension", "file-api"]
+classifiers  = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.urls]
+Homepage   = "https://github.com/localstack/localstack-file-api"
+Repository = "https://github.com/localstack/localstack-file-api"
+
+# ── optional dependencies ──────────────────────────────────────────────────────
+[project.optional-dependencies]
+dev = [
+    "localstack>=0.0.0.dev",
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "isort>=5.0",
+    "ruff>=0.4.0",
+    "build",
+    "twine",
+]
+
+# ── entry points ───────────────────────────────────────────────────────────────
+[project.entry-points."localstack.extensions"]
+file-api = "localstack_file_api.extension:FileApiExtension"
+
+[project.entry-points."localstack.openapi.spec"]
+localstack_file_api = "localstack_file_api.plugins:FileApiOASPlugin"
+
+# ── package discovery ──────────────────────────────────────────────────────────
+[tool.setuptools.packages.find]
+where   = ["."]
+include = ["localstack_file_api*"]
+
+[tool.setuptools.package-data]
+localstack_file_api = ["openapi.yaml"]
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts   = "-v --tb=short"
+
+# ── coverage ──────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["localstack_file_api"]
+omit   = ["*/tests/*", "setup.py"]
+
+[tool.coverage.report]
+show_missing  = true
+skip_covered  = false
+fail_under    = 80
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+# ── ruff ──────────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length    = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",  # line too long — handled by black
+    "B008",  # do not perform function calls in default arguments
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["localstack_file_api"]
+
+# ── black ─────────────────────────────────────────────────────────────────────
+[tool.black]
+line-length = 100
+include     = '(localstack_file_api/.*\.py$|tests/.*\.py$)'
+
+# ── isort ─────────────────────────────────────────────────────────────────────
+[tool.isort]
+profile     = "black"
+line_length = 100

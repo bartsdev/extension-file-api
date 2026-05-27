@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+  title: LocalStack File API
+  version: 0.1.0
+  description: Generic file-upload REST API for LocalStack instances.
+
+paths:
+  /_localstack/files:
+    post:
+      operationId: uploadFile
+      summary: Upload a file into the instance
+      description: >
+        Writes a file to a target path inside the LocalStack container. The
+        target must resolve inside one of the allowlisted roots
+        (FILE_API_ALLOWED_ROOTS). Accepts either multipart/form-data (fields
+        `file` and `path`) or a raw body with `?path=`.
+      tags: [files]
+      parameters:
+        - in: query
+          name: path
+          required: false
+          schema:
+            type: string
+          description: Target absolute path (required when sending a raw body).
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                path:
+                  type: string
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: File written.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileWriteResult"
+        "400":
+          description: Missing target path or content.
+        "401":
+          description: Unauthorized.
+        "403":
+          description: Target path outside the allowlist.
+        "413":
+          description: File exceeds size limit.
+    get:
+      operationId: statOrListFile
+      summary: Stat a file or list a directory
+      tags: [files]
+      parameters:
+        - in: query
+          name: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File metadata or directory listing.
+        "403":
+          description: Path outside the allowlist or missing.
+        "404":
+          description: Not found.
+    delete:
+      operationId: deleteFile
+      summary: Delete a file
+      tags: [files]
+      parameters:
+        - in: query
+          name: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File deleted.
+        "403":
+          description: Path outside the allowlist or missing.
+        "404":
+          description: Not a file or not found.
+
+components:
+  schemas:
+    FileWriteResult:
+      type: object
+      properties:
+        path:
+          type: string
+        size:
+          type: integer
+        sha256:
+          type: string

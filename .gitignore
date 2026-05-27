@@ -1,0 +1,65 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Packaging / distribution ──────────────────────────────────────────────────
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+wheels/
+*.tar.gz
+*.whl
+MANIFEST
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+
+# ── Testing & coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+nosetests.xml
+pytest.xml
+
+# ── Type checkers ─────────────────────────────────────────────────────────────
+.mypy_cache/
+.pytype/
+.pyre/
+.pyright/
+
+# ── Editors & IDEs ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+*.sublime-project
+*.sublime-workspace
+
+# ── OS artefacts ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Secrets / local overrides ────────────────────────────────────────────────
+*.pem
+*.key
+secrets.yaml
+secrets.json
