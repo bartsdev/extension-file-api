@@ -23,8 +23,9 @@ from localstack_file_api.api import FileApiResource
 class _FakeStorage:
     """Minimal stand-in for werkzeug FileStorage."""
 
-    def __init__(self, data: bytes):
+    def __init__(self, data: bytes, filename: str = ""):
         self._data = data
+        self.filename = filename
 
     def read(self) -> bytes:
         return self._data
@@ -240,6 +241,44 @@ class TestUploadMultipart:
         resp = resource.on_post(req)
 
         assert resp.status_code == 201
+
+    def test_default_path_uses_original_filename_under_tmp(self, resource, workspace, monkeypatch):
+        """No path given → file lands at /tmp/<original_filename>."""
+        monkeypatch.setenv("FILE_API_ALLOWED_ROOTS", "/tmp")
+        content = b"default path content"
+        req = _FakeRequest(
+            files={"file": _FakeStorage(content, filename="script.sh")},
+            content_type="multipart/form-data; boundary=testboundary",
+        )
+        resp = resource.on_post(req)
+        body = json.loads(resp.data)
+
+        assert resp.status_code == 201
+        assert body["path"] == os.path.realpath("/tmp/script.sh")
+
+    def test_default_path_strips_directory_traversal_from_filename(self, resource, workspace, monkeypatch):
+        """Basename is taken from the original filename — directory component is stripped."""
+        monkeypatch.setenv("FILE_API_ALLOWED_ROOTS", "/tmp")
+        content = b"data"
+        req = _FakeRequest(
+            files={"file": _FakeStorage(content, filename="../../etc/passwd")},
+            content_type="multipart/form-data; boundary=testboundary",
+        )
+        resp = resource.on_post(req)
+        body = json.loads(resp.data)
+
+        # basename("../../etc/passwd") == "passwd" → /tmp/passwd (inside allowlist)
+        assert resp.status_code == 201
+        assert body["path"] == os.path.realpath("/tmp/passwd")
+
+    def test_raw_body_still_requires_path(self, resource, workspace):
+        """Default path only applies to multipart; raw body still needs ?path=."""
+        req = _FakeRequest(body=b"data", content_type="application/octet-stream")
+        resp = resource.on_post(req)
+        body = json.loads(resp.data)
+
+        assert resp.status_code == 400
+        assert "missing target path" in body["error"]
 
     def test_rejects_when_file_field_missing(self, resource, workspace):
         """Multipart content-type but 'file' field absent → 400."""

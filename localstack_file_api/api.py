@@ -26,8 +26,8 @@ from localstack.http import Request, Response
 # configured handlers, formatters, and LS_LOG level overrides.
 LOG = logging.getLogger("localstack.extensions.file_api.api")
 
-DEFAULT_ALLOWED_ROOTS = ["/tmp", "/workspace", "/etc/localstack/init"]
-
+DEFAULT_ALLOWED_ROOTS = ["/tmp"]
+# DEFAULT_ALLOWED_ROOTS = ["/tmp", "/workspace", "/etc/localstack/init"]
 
 def _allowed_roots() -> list[str]:
     raw = os.environ.get("FILE_API_ALLOWED_ROOTS")
@@ -144,8 +144,11 @@ class FileApiResource:
 
         if "multipart/form-data" in content_type:
             # Multipart upload: file bytes from files["file"], path from form or query arg.
+            # If no explicit path is given, fall back to /tmp/<original_filename>.
             storage = request.files.get("file")
             target = request.form.get("path") or request.args.get("path")
+            if target is None and storage is not None and storage.filename:
+                target = os.path.join("/tmp", os.path.basename(storage.filename))
             return (target, storage.read()) if storage is not None else (target, None)
 
         # Raw body upload.
