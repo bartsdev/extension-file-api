@@ -22,7 +22,9 @@ import os
 
 from localstack.http import Request, Response
 
-LOG = logging.getLogger(__name__)
+# Use the localstack.* namespace so logs flow through LocalStack's
+# configured handlers, formatters, and LS_LOG level overrides.
+LOG = logging.getLogger("localstack.extensions.file_api.api")
 
 DEFAULT_ALLOWED_ROOTS = ["/tmp", "/workspace", "/etc/localstack/init"]
 
@@ -89,7 +91,12 @@ class FileApiResource:
             f.write(data)
 
         digest = hashlib.sha256(data).hexdigest()
-        LOG.info("file-api wrote %d bytes to %s", len(data), target)
+        LOG.info(
+            "file-api upload: name=%s path=%s size=%d bytes",
+            os.path.basename(target),
+            target,
+            len(data),
+        )
         return _json({"path": target, "size": len(data), "sha256": digest}, 201)
 
     def on_get(self, request: Request) -> Response:
@@ -124,7 +131,11 @@ class FileApiResource:
             return _json({"error": "not a file or not found", "path": target}, 404)
 
         os.remove(target)
-        LOG.info("file-api deleted %s", target)
+        LOG.info(
+            "file-api delete: name=%s path=%s",
+            os.path.basename(target),
+            target,
+        )
         return _json({"path": target, "deleted": True})
 
     @staticmethod
