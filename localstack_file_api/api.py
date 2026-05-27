@@ -140,13 +140,19 @@ class FileApiResource:
 
     @staticmethod
     def _extract_upload(request: Request) -> tuple[str | None, bytes | None]:
-        # multipart/form-data: file in `file`, target in `path`
-        if request.files:
+        content_type = request.content_type or ""
+
+        if "multipart/form-data" in content_type:
+            # Multipart upload: file bytes from files["file"], path from form or query arg.
             storage = request.files.get("file")
             target = request.form.get("path") or request.args.get("path")
-            if storage is not None:
-                return target, storage.read()
-        # raw body: target from query param
-        target = request.args.get("path") or request.form.get("path")
+            return (target, storage.read()) if storage is not None else (target, None)
+
+        # Raw body upload.
+        # IMPORTANT: read the body with get_data() BEFORE accessing request.form.
+        # For application/x-www-form-urlencoded (curl's default when using --data-binary),
+        # touching request.files or request.form triggers Werkzeug's form parser which
+        # consumes the input stream, leaving get_data() with nothing to read.
         body = request.get_data()
-        return target, (body if body else None)
+        target = request.args.get("path")
+        return target, (body or None)

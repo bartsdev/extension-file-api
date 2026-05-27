@@ -41,12 +41,19 @@ class _FakeRequest:
         form: dict | None = None,
         files: dict | None = None,
         body: bytes = b"",
+        content_type: str = "",
     ):
         self.headers = headers or {}
         self.args = args or {}
         self.form = form or {}
         self.files = files or {}
         self._body = body
+        # Derive content_type: explicit arg wins, then headers, then empty.
+        self.content_type = (
+            content_type
+            or self.headers.get("content-type", "")
+            or self.headers.get("Content-Type", "")
+        )
 
     def get_data(self) -> bytes:
         return self._body
@@ -54,7 +61,12 @@ class _FakeRequest:
 
 def _raw_upload(path: str, body: bytes, *, headers: dict | None = None) -> _FakeRequest:
     """Raw-body upload: path in query param, content in body."""
-    return _FakeRequest(headers=headers or {}, args={"path": path}, body=body)
+    return _FakeRequest(
+        headers=headers or {},
+        args={"path": path},
+        body=body,
+        content_type="application/octet-stream",
+    )
 
 
 def _multipart_upload(
@@ -65,6 +77,7 @@ def _multipart_upload(
         headers=headers or {},
         form={"path": path},
         files={"file": _FakeStorage(body)},
+        content_type="multipart/form-data; boundary=testboundary",
     )
 
 
@@ -222,22 +235,22 @@ class TestUploadMultipart:
         req = _FakeRequest(
             args={"path": str(workspace / "q.bin")},
             files={"file": _FakeStorage(content)},
+            content_type="multipart/form-data; boundary=testboundary",
         )
         resp = resource.on_post(req)
 
         assert resp.status_code == 201
 
     def test_rejects_when_file_field_missing(self, resource, workspace):
-        """files dict present but no 'file' key → falls through to raw body check."""
+        """Multipart content-type but 'file' field absent → 400."""
         req = _FakeRequest(
+            headers={"content-type": "multipart/form-data; boundary=xxx"},
             form={"path": str(workspace / "x.txt")},
-            files={"other": _FakeStorage(b"data")},  # wrong key
-            body=b"",
+            files={"other": _FakeStorage(b"data")},  # wrong key, no 'file'
         )
         resp = resource.on_post(req)
         body = json.loads(resp.data)
 
-        # falls back to raw body check; body is empty → 400
         assert resp.status_code == 400
         assert "no file content" in body["error"]
 
